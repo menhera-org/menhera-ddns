@@ -36,6 +36,26 @@ while preserving the other address family. Deleting removes the hostname's
 RRsets and credential PTR in one update. Records created by the service use a
 60-second TTL.
 
+## Intentional limitations and deployment assumptions
+
+This service makes the following deliberate compatibility and operational
+trade-offs:
+
+- Hostname creation is unauthenticated. This is a known limitation and an
+  accepted compromise; deployments that need admission control must provide it
+  outside this service.
+- Bearer tokens are passed in URL query parameters, and plain HTTP is allowed.
+  Many legacy or limited clients cannot set an `Authorization` header or use
+  HTTPS, so both behaviors are retained for compatibility. Deployments must not
+  log HTTP request targets (including paths and query strings), because doing so
+  would expose the tokens, and must otherwise accept or mitigate the risk of
+  sending them without transport encryption.
+- The entire configured zone must be dedicated to this DDNS service. Hostname
+  creation reserves the service's TXT marker rather than requiring that no
+  other RRsets exist at the name, and deletion removes every RRset at the
+  managed name. Mixing independently managed records into the zone could
+  therefore allow them to be overwritten or deleted.
+
 ## Requirements
 
 The authoritative DNS server must:
