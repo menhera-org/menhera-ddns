@@ -33,6 +33,13 @@ const INDEX_HTML: &str = include_str!("web/index.html");
 const MAIN_CSS: &str = include_str!("web/main.css");
 const MAIN_JS: &str = include_str!("web/main.js");
 
+fn absolute_dns_name(mut name: String) -> std::io::Result<Name> {
+    if !name.ends_with('.') {
+        name.push('.');
+    }
+    Name::from_ascii(name).map_err(std::io::Error::other)
+}
+
 /// hmac-sha256 TSIG key
 #[derive(Debug, Clone)]
 struct UpdateKey {
@@ -54,23 +61,22 @@ struct DdnsConfig {
 
 impl DdnsConfig {
     fn zone_name(&self) -> std::io::Result<Name> {
-        Name::from_ascii(self.ddns_zone.to_string()).map_err(std::io::Error::other)
+        absolute_dns_name(self.ddns_zone.to_string())
     }
 
     fn hostname_name(&self, hostname: &str) -> std::io::Result<Name> {
-        Name::from_ascii(format!("{hostname}.{}", self.ddns_zone)).map_err(std::io::Error::other)
+        absolute_dns_name(format!("{hostname}.{}", self.ddns_zone))
     }
 
     fn ptr_name_from_token(&self, token: &str) -> std::io::Result<Name> {
         let mut hash = HmacSha256::new_from_slice(&self.server_secret).expect("Oops");
         hash.update(token.as_ref());
         let hash = hash.finalize().into_bytes();
-        Name::from_ascii(format!(
+        absolute_dns_name(format!(
             "{}._token.{}",
             base32::encode(base32::Alphabet::Rfc4648HexLower { padding: false }, &hash,),
             self.ddns_zone,
         ))
-        .map_err(std::io::Error::other)
     }
 
     async fn query(&self, name: Name, record_type: RecordType) -> std::io::Result<Vec<Record>> {
@@ -522,8 +528,7 @@ async fn main() -> Result<(), std::io::Error> {
         secret: secret.into(),
     };
 
-    let signer_name =
-        Name::from_ascii(update_key.name.to_string()).map_err(std::io::Error::other)?;
+    let signer_name = absolute_dns_name(update_key.name.to_string())?;
     let signer = TSigner::new(
         update_key.secret.to_vec(),
         TsigAlgorithm::HmacSha256,
@@ -566,6 +571,15 @@ async fn main() -> Result<(), std::io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn locally_constructed_dns_names_are_absolute() {
+        let name = absolute_dns_name("host.d.example".to_owned()).unwrap();
+        let parsed_from_wire = Name::from_ascii("host.d.example.").unwrap();
+
+        assert!(name.is_fqdn());
+        assert_eq!(name, parsed_from_wire);
+    }
 
     #[tokio::test]
     async fn embedded_web_assets_have_expected_content_types() {
