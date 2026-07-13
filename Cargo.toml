@@ -2,6 +2,9 @@
 name = "menhera-ddns"
 version = "0.1.0"
 edition = "2024"
+license = "Apache-2.0 OR MPL-2.0"
+description = "a small HTTP-to-DNS dynamic update service"
+repository = "https://github.com/menhera-org/menhera-ddns"
 
 [dependencies]
 base32 = "0.5"
