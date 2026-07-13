@@ -1,9 +1,9 @@
 use axum::{
     Router,
     extract::{Query, State},
-    http::{HeaderMap, StatusCode},
-    response::{IntoResponse, Json},
-    routing::post,
+    http::{HeaderMap, StatusCode, header},
+    response::{Html, IntoResponse, Json},
+    routing::{get, post},
 };
 use base64::Engine;
 use futures_util::StreamExt;
@@ -29,6 +29,9 @@ use std::{io::ErrorKind, net::IpAddr, sync::Arc};
 
 type HmacSha256 = Hmac<Sha256>;
 const RECORD_TTL: u32 = 60;
+const INDEX_HTML: &str = include_str!("web/index.html");
+const MAIN_CSS: &str = include_str!("web/main.css");
+const MAIN_JS: &str = include_str!("web/main.js");
 
 /// hmac-sha256 TSIG key
 #[derive(Debug, Clone)]
@@ -252,6 +255,36 @@ impl DdnsConfig {
 
 fn json_response(status: StatusCode, response: serde_json::Value) -> axum::response::Response {
     (status, Json(response)).into_response()
+}
+
+async fn handler_index() -> Html<&'static str> {
+    Html(INDEX_HTML)
+}
+
+fn embedded_asset(content_type: &'static str, content: &'static str) -> axum::response::Response {
+    (
+        [
+            (header::CONTENT_TYPE, content_type),
+            (header::CACHE_CONTROL, "no-cache"),
+        ],
+        content,
+    )
+        .into_response()
+}
+
+async fn handler_main_css() -> axum::response::Response {
+    embedded_asset("text/css; charset=utf-8", MAIN_CSS)
+}
+
+async fn handler_main_js() -> axum::response::Response {
+    embedded_asset("text/javascript; charset=utf-8", MAIN_JS)
+}
+
+async fn handler_info(State(state): State<DdnsConfig>) -> impl IntoResponse {
+    Json(json!({
+        "error": Value::Null,
+        "zone": state.ddns_zone.to_string(),
+    }))
 }
 
 async fn handler_create(
@@ -516,6 +549,10 @@ async fn main() -> Result<(), std::io::Error> {
     };
 
     let app = Router::new()
+        .route("/", get(handler_index))
+        .route("/main.css", get(handler_main_css))
+        .route("/main.js", get(handler_main_js))
+        .route("/info", get(handler_info))
         .route("/create", post(handler_create))
         .route("/delete", post(handler_delete))
         .route("/update", post(handler_update))
@@ -524,4 +561,33 @@ async fn main() -> Result<(), std::io::Error> {
     let listener = tokio::net::TcpListener::bind(listen_addr).await?;
     axum::serve(listener, app).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn embedded_web_assets_have_expected_content_types() {
+        let index = handler_index().await.into_response();
+        let css = handler_main_css().await;
+        let js = handler_main_js().await;
+
+        assert_eq!(
+            index.headers()[header::CONTENT_TYPE],
+            "text/html; charset=utf-8"
+        );
+        assert_eq!(
+            css.headers()[header::CONTENT_TYPE],
+            "text/css; charset=utf-8"
+        );
+        assert_eq!(
+            js.headers()[header::CONTENT_TYPE],
+            "text/javascript; charset=utf-8"
+        );
+        assert!(INDEX_HTML.contains("/main.css"));
+        assert!(INDEX_HTML.contains("/main.js"));
+        assert!(!MAIN_CSS.is_empty());
+        assert!(!MAIN_JS.is_empty());
+    }
 }

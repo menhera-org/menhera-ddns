@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>menhera-ddns</title>
+    <link rel="stylesheet" href="/main.css">
+    <script src="/main.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <p id="zone-brand" class="eyebrow">Dynamic DNS</p>
+        <h1>menhera-ddns</h1>
+        <p class="lede">Reserve names in <strong id="zone-name">the configured zone</strong>
+          and keep their addresses pointed at this connection.</p>
+      </header>
+
+      <section class="panel" aria-labelledby="create-title">
+        <div class="section-heading">
+          <div>
+            <p class="step">New record</p>
+            <h2 id="create-title">Reserve a hostname</h2>
+          </div>
+        </div>
+        <form id="create-form" class="create-form">
+          <label for="hostname">Hostname label</label>
+          <div class="field-row">
+            <div class="hostname-field">
+              <input id="hostname" name="hostname" type="text" maxlength="63"
+                pattern="[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+                autocomplete="off" autocapitalize="none" spellcheck="false"
+                aria-describedby="hostname-preview" placeholder="laptop" required>
+              <span id="zone-suffix" class="zone-suffix" aria-hidden="true">.loading…</span>
+            </div>
+            <button type="submit">Reserve name</button>
+          </div>
+          <p id="hostname-preview" class="field-hint">Loading the complete hostname…</p>
+        </form>
+      </section>
+
+      <section class="records" aria-labelledby="records-title">
+        <div class="section-heading records-heading">
+          <div>
+            <p class="step">This browser</p>
+            <h2 id="records-title">Managed names</h2>
+          </div>
+          <button id="import-toggle" class="quiet" type="button" aria-expanded="false"
+            aria-controls="import-form">Import token</button>
+        </div>
+
+        <form id="import-form" class="panel import-form" hidden>
+          <div>
+            <label for="import-hostname">Display name</label>
+            <input id="import-hostname" name="hostname" type="text" autocomplete="off"
+              autocapitalize="none" spellcheck="false" placeholder="laptop">
+          </div>
+          <div>
+            <label for="import-token">Token</label>
+            <input id="import-token" name="token" type="password" minlength="32" maxlength="32"
+              pattern="[A-Fa-f0-9]{32}" autocomplete="off" spellcheck="false"
+              placeholder="32 hexadecimal characters" required>
+          </div>
+          <button type="submit">Save in this browser</button>
+        </form>
+
+        <div id="empty-state" class="empty-state">
+          <p>No credentials are stored in this browser yet.</p>
+        </div>
+        <div id="record-list" class="record-list" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+
+    <template id="record-template">
+      <article class="record panel">
+        <div class="record-copy">
+          <p class="record-name"></p>
+          <p class="record-detail">Address not updated in this browser session</p>
+        </div>
+        <div class="record-actions">
+          <button class="update-button" type="button">Use current IP</button>
+          <button class="copy-button quiet" type="button">Copy token</button>
+          <button class="delete-button danger" type="button">Delete</button>
+        </div>
+      </article>
+    </template>
+  </body>
+</html>

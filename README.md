@@ -100,8 +100,26 @@ cargo run --release
 
 ## HTTP API
 
-All endpoints use `POST` and return JSON. Successful responses contain
-`"error": null`; failures contain a string in `"error"`.
+The mutation endpoints use `POST`, and all API endpoints return JSON.
+Successful responses contain `"error": null`; failures contain a string in
+`"error"`.
+
+`GET /info` returns the configured zone for clients that need to present
+complete names:
+
+```json
+{"error":null,"zone":"ddns.example.net."}
+```
+
+### Web UI
+
+Open `/` in a browser to reserve and manage hostnames. The standalone interface
+and its JavaScript and CSS are embedded in the executable; it does not load any
+resources from third-party servers. Issued and imported credentials are stored
+in that browser's local storage and can be copied for backup or use elsewhere.
+
+Address updates use the same `X-Real-IP` behavior as the HTTP API, so the proxy
+in front of the service must set that header to the client's address.
 
 ### Create a hostname
 
